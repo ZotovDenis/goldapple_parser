@@ -21,14 +21,14 @@ def main() -> None:
     """Основная функция, которая выполняет сбор данных о продуктах, их обработку и сохранение в CSV-файл."""
     firefox_driver = wd.Firefox(options=opts)
 
-    # print("Загрузка данных...")
-    # product_urls = get_all_products_urls(end_page=1)
-    # print("Готово! Получено {} товаров.".format(len(product_urls)))
+    print("Загрузка данных...")
+    product_urls = get_all_products_urls(end_page=416)
+    print("Готово! Получено {} товаров.".format(len(product_urls)))
 
-    product_urls = ["https://goldapple.ru/26830400003-dreaming-with-ghosts",
-                    "https://goldapple.ru/7430500002-eau-fraiche",
-                    "https://goldapple.ru/19000225097"
-                    ]
+    # product_urls = ["https://goldapple.ru/26830400003-dreaming-with-ghosts",
+    #                 "https://goldapple.ru/7430500002-eau-fraiche",
+    #                 "https://goldapple.ru/19000225097"
+    #                 ]
 
     print("Обработка данных...")
     items_list: list[dict] = []
@@ -85,7 +85,7 @@ def parse_page(soup: bs) -> bs:
     Ищет элемент <div> с указанным классом в объекте BeautifulSoup
     для последующего получения из него всех ссылок на товары.
     """
-    tablet_items_class = soup.find('div', class_=r'hxiVe')
+    tablet_items_class = soup.find('div', class_=r'agT1K')
     return tablet_items_class
 
 
@@ -93,7 +93,7 @@ def get_items_urls_on_page(tablet_items_class_content) -> list:
     """Функция получает элементы товаров и забирает из них ссылки на эти товары."""
     product_urls: list = []
     for item in tablet_items_class_content:
-        url = 'https://goldapple.ru' + item.find('a', class_=r'f1gUa HWnwO c1-sc bp3JF').get('href')
+        url = 'https://goldapple.ru' + item.find('a', class_=r'-VFCY G0WXL _5u-Bz mZ52s').get('href')
         product_urls.append(url)
     return product_urls
 
@@ -144,8 +144,8 @@ def get_item_description(driver: wd):
     """Функция осуществляет поиск поле <Описание> и парсит соответствующее полю значение."""
     try:
         p_item_description = driver.find_element(
-            By.CLASS_NAME, r'whC8c')
-        return p_item_description.text.strip()
+            By.CLASS_NAME, r'nQhAH')
+        return p_item_description.text.replace("\n", "").strip()
     except NoSuchElementException:
         return "Not available"
 
@@ -176,10 +176,10 @@ def manipulate_menu(driver: wd):
 
             if menu_item.text.strip() == "ПРИМЕНЕНИЕ":
                 p_item_instructions = driver.find_element(
-                    By.CLASS_NAME, r'whC8c').text.strip()
+                    By.CLASS_NAME, r'nQhAH').text.strip()
             elif menu_item.text.strip() == "О БРЕНДЕ":
                 p_item_country = driver.find_element(
-                    By.CLASS_NAME, r'jDJBt').text.strip()
+                    By.CLASS_NAME, r'_5VYuO').text.strip()
 
         except NoSuchElementException:
             continue

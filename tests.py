@@ -45,7 +45,7 @@ class TestParsePage(unittest.TestCase):
         """Проверяет, что функция parse_page возвращает ожидаемый результат при обработке фейкового HTML-кода."""
 
         # Создаем фейковый HTML-код для теста
-        fake_html = '<html><body><div class="hxiVe"><a class="f1gUa HWnwO c1-sc bp3JF" href="product1">Product 1</a><a class="f1gUa HWnwO c1-sc bp3JF" href="product2">Product 2</a></div></body></html>'
+        fake_html = '<html><body><div class="agT1K"><a class="-VFCY G0WXL _5u-Bz mZ52s" href="product1">Product 1</a><a class="-VFCY G0WXL _5u-Bz mZ52s" href="product2">Product 2</a></div></body></html>'
         soup = BeautifulSoup(fake_html, 'html.parser')
 
         # Вызываем тестируемую функцию
@@ -53,7 +53,7 @@ class TestParsePage(unittest.TestCase):
 
         # Проверяем, что функция возвращает ожидаемый результат
         self.assertIsNotNone(result)
-        self.assertEqual(result['class'], ['hxiVe'])
+        self.assertEqual(result['class'], ['agT1K'])
 
 
 class TestGetItemsUrlsOnPage(unittest.TestCase):
@@ -61,11 +61,11 @@ class TestGetItemsUrlsOnPage(unittest.TestCase):
         """Проверяет, что функция get_items_urls_on_page находит URL в элементе и добавляет его в список."""
 
         # Создаем фейковый объект BeautifulSoup для теста
-        fake_html = '<html><body><div class="hxiVe"><a class="f1gUa HWnwO c1-sc bp3JF" href="/product1">Product 1</a><a class="f1gUa HWnwO c1-sc bp3JF" href="/product2">Product 2</a></div></body></html>'
+        fake_html = '<html><body><div class="agT1K"><a class="-VFCY G0WXL _5u-Bz mZ52s" href="/product1">Product 1</a><a class="-VFCY G0WXL _5u-Bz mZ52s" href="/product2">Product 2</a></div></body></html>'
         soup = BeautifulSoup(fake_html, 'html.parser')
 
         # Вызываем тестируемую функцию
-        result = get_items_urls_on_page(soup.find_all('div', class_='hxiVe'))
+        result = get_items_urls_on_page(soup.find_all('div', class_='agT1K'))
 
         # Проверяем, что функция возвращает ожидаемый результат
         self.assertEqual(result, ['https://goldapple.ru/product1'])
