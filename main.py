@@ -1,28 +1,27 @@
 import time
 
-import httpx
 import pandas as pd
-from bs4 import BeautifulSoup as bs
 from selenium import webdriver as wd
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException
 
 URL = "https://goldapple.ru/parfjumerija"
-CSV_PATH = "data.csv"
+CSV_PATH = "products.csv"
 
 opts = wd.FirefoxOptions()
-opts.add_argument("--width=1920")
-opts.add_argument("--height=1080")
+opts.add_argument("--width=1200")
+opts.add_argument("--height=720")
 
 
 # ====================================================================================
 
 def main() -> None:
     """Основная функция, которая выполняет сбор данных о продуктах, их обработку и сохранение в CSV-файл."""
+
     firefox_driver = wd.Firefox(options=opts)
 
     print("Загрузка данных...")
-    product_urls = get_all_products_urls(end_page=416)
+    product_urls = get_all_products_urls(start_page=1, end_page=414, driver=firefox_driver)
     print("Готово! Получено {} товаров.".format(len(product_urls)))
 
     # product_urls = ["https://goldapple.ru/26830400003-dreaming-with-ghosts",
@@ -34,13 +33,13 @@ def main() -> None:
     items_list: list[dict] = []
     item_number = 0
     for _url in product_urls:
-        firefox_driver.get(_url)
+        make_selenium_get_request(_url, firefox_driver)
 
         time.sleep(1.5)
 
         item_number: int = item_number + 1
         item_name: str = get_item_name(driver=firefox_driver)
-        item_price: float = get_item_price(driver=firefox_driver)
+        item_price: str = get_item_price(driver=firefox_driver)
         item_rating: float | str = get_item_rating(driver=firefox_driver)
         item_description: str = get_item_description(driver=firefox_driver)
         item_instructions, item_country = manipulate_menu(driver=firefox_driver)
@@ -65,53 +64,43 @@ def main() -> None:
 
     firefox_driver.close()
 
+
 # ====================================================================================
 
 
-def make_get_request(url: str, params: dict | None = None) -> httpx.Response:
+def make_selenium_get_request(url: str, driver, page: int | None = None) -> None:
     """Выполняет HTTP GET-запрос к указанному URL."""
-    return httpx.get(
-        url, params=params, verify=False, timeout=None
-    )
+    request_url = url
+    if page:
+        request_url += f"?p={page}"
+    driver.get(request_url)
 
 
-def get_soup(response: httpx.Response) -> bs:
-    """Создает объект BeautifulSoup из содержимого HTTP-ответа."""
-    return bs(response.content, 'html.parser')
-
-
-def parse_page(soup: bs) -> bs:
-    """
-    Ищет элемент <div> с указанным классом в объекте BeautifulSoup
-    для последующего получения из него всех ссылок на товары.
-    """
-    tablet_items_class = soup.find('div', class_=r'agT1K')
-    return tablet_items_class
+def get_items_class(driver):
+    children = driver.find_elements(By.CLASS_NAME, "ipgL7")
+    print(f"Это внутри: {children}")
+    return children
 
 
 def get_items_urls_on_page(tablet_items_class_content) -> list:
-    """Функция получает элементы товаров и забирает из них ссылки на эти товары."""
     product_urls: list = []
     for item in tablet_items_class_content:
-        url = 'https://goldapple.ru' + item.find('a', class_=r'-VFCY G0WXL _5u-Bz mZ52s').get('href')
-        product_urls.append(url)
+        try:
+            url = item.find_element(By.TAG_NAME, r'article').find_element(By.TAG_NAME, r'a')
+            product_urls.append(url.get_attribute("href"))
+        except NoSuchElementException:
+            continue
     return product_urls
 
 
-def get_all_products_urls(start_page: int = 1, end_page: int = 1) -> list:
+def get_all_products_urls(driver, start_page: int = 1, end_page: int = 1) -> list:
     """Функция получает список URL-адресов продуктов с веб-страницы магазина."""
     product_urls: list = []
     for page in range(start_page, end_page + 1):
-        # отправление запроса
-        response: httpx.Response = make_get_request(URL, params={"p": page})
-        # получение html
-        all_products_soup: bs = get_soup(response)
-        # получение div-ов с карточками продукта
-        tablet_items_class: bs = parse_page(all_products_soup)
-        # получение списка урлов по продуктам и добавление в общий список
-        product_urls += get_items_urls_on_page(tablet_items_class.contents)
-
-        print(f"Страница {page} обработана. Статус {response.status_code}")
+        make_selenium_get_request(URL, driver, page)
+        tablet_items_class = get_items_class(driver)
+        product_urls += get_items_urls_on_page(tablet_items_class)
+        print(f"Страница {page} обработана.")
         time.sleep(2)
     return product_urls
 
@@ -133,9 +122,8 @@ def get_item_price(driver: wd):
     try:
         p_item_price = driver.find_element(
             By.XPATH, '//*[@id="__layout"]/div/main/article/div[1]/div[1]/form/div[2]/div[1]/div[1]/div[1]')
-        only_digits_from_value: list[str] = [s for s in p_item_price.text.split() if s.isdigit()]
-        float_price: float = float("".join(only_digits_from_value))
-        return float_price
+        price = p_item_price.text.strip()
+        return price
     except NoSuchElementException:
         return "Not available"
 
@@ -144,7 +132,7 @@ def get_item_description(driver: wd):
     """Функция осуществляет поиск поле <Описание> и парсит соответствующее полю значение."""
     try:
         p_item_description = driver.find_element(
-            By.CLASS_NAME, r'nQhAH')
+            By.CLASS_NAME, r'nrFvf')
         return p_item_description.text.replace("\n", "").strip()
     except NoSuchElementException:
         return "Not available"
@@ -176,10 +164,10 @@ def manipulate_menu(driver: wd):
 
             if menu_item.text.strip() == "ПРИМЕНЕНИЕ":
                 p_item_instructions = driver.find_element(
-                    By.CLASS_NAME, r'nQhAH').text.strip()
+                    By.CLASS_NAME, r'nrFvf').text.replace("\n", "").strip()
             elif menu_item.text.strip() == "О БРЕНДЕ":
                 p_item_country = driver.find_element(
-                    By.CLASS_NAME, r'_5VYuO').text.strip()
+                    By.CLASS_NAME, r'FWNOx').text.strip()
 
         except NoSuchElementException:
             continue
@@ -210,7 +198,7 @@ def get_dataframe(items_dict: list[dict]) -> pd.DataFrame:
     return dataframe
 
 
-def save_to_csv(df: pd.DataFrame, path: str | None = "data.csv") -> None:
+def save_to_csv(df: pd.DataFrame, path: str | None = "products.csv") -> None:
     """Сохранение в CSV-файл."""
     df.to_csv(path, index=False, encoding="utf-8")
 

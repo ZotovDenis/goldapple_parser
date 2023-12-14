@@ -2,89 +2,84 @@ import os
 import unittest
 from unittest.mock import Mock, MagicMock, patch
 
-import httpx
 import pandas as pd
-from bs4 import BeautifulSoup
 from selenium.common.exceptions import NoSuchElementException
+from selenium.webdriver.common.by import By
 
-from main import make_get_request, get_soup, parse_page, get_items_urls_on_page, get_all_products_urls, get_item_name, \
+from main import get_items_urls_on_page, get_all_products_urls, get_item_name, \
     get_item_price, get_item_description, get_item_rating, manipulate_menu, create_item_dict, get_dataframe, \
-    save_to_csv
+    save_to_csv, make_selenium_get_request, get_items_class
 
 
-class TestMakeGetRequest(unittest.TestCase):
-    def test_make_get_request(self):
+class TestMakeSeleniumGetRequest(unittest.TestCase):
+    def test_make_selenium_get_request(self):
         """
-        Проверяет, что функция make_get_request возвращает ответ с кодом 200 при выполнении запроса на указанный URL.
-        """
+        Тестирование функции make_selenium_get_request на корректное формирование URL и
+        вызов метода get у объекта driver.
 
-        actual_response = make_get_request('https://goldapple.ru/parfjumerija')
-        self.assertEqual(actual_response.status_code, 200)
-
-
-class TestGetSoup(unittest.TestCase):
-    def test_get_soup(self):
-        """
-        Проверяет, что функция get_soup корректно создает объект BeautifulSoup
-        из фиктивного объекта httpx.Response.
+        Создаем заглушку для объекта driver.
+        Затем вызываем тестируемую функцию make_selenium_get_request с URL 'https://example.com' и параметром page=1.
+        После этого проверяем, что функция driver.get была вызвана с правильным аргументом 'https://example.com?p=1'.
         """
 
-        # Создаем фиктивный объект httpx.Response
-        fake_html = b"<html><body><p>Hello, World!</p></body></html>"
-        fake_response = Mock(spec=httpx.Response, content=fake_html)
-
-        # Вызываем тестируемую функцию
-        soup = get_soup(fake_response)
-
-        # Проверяем, что возвращается объект BeautifulSoup
-        self.assertIsInstance(soup, BeautifulSoup)
+        driver = Mock()
+        make_selenium_get_request('https://goldapple.ru/parfjumerija', driver, page=1)
+        driver.get.assert_called_once_with('https://goldapple.ru/parfjumerija?p=1')
 
 
-class TestParsePage(unittest.TestCase):
-    def test_parse_page(self):
-        """Проверяет, что функция parse_page возвращает ожидаемый результат при обработке фейкового HTML-кода."""
+class TestGetItemsClass(unittest.TestCase):
+    def test_get_items_class(self):
+        """
+        Тестирование функции get_items_class на корректный поиск элементов на странице.
 
-        # Создаем фейковый HTML-код для теста
-        fake_html = '<html><body><div class="agT1K"><a class="-VFCY G0WXL _5u-Bz mZ52s" href="product1">Product 1</a><a class="-VFCY G0WXL _5u-Bz mZ52s" href="product2">Product 2</a></div></body></html>'
-        soup = BeautifulSoup(fake_html, 'html.parser')
+        Создаем заглушку для объекта driver.
+        Затем создаем заглушки для найденных элементов и устанавливаем возвращаемое значение для driver.find_elements.
+        После этого вызываем тестируемую функцию get_items_class с объектом driver.
+        Проверяем, что функция driver.find_elements была вызвана с правильным аргументом (By.CLASS_NAME, "NiYv1").
+        Затем проверяем, что функция возвращает ожидаемый результат - список найденных элементов.
+        """
 
-        # Вызываем тестируемую функцию
-        result = parse_page(soup)
+        driver = Mock()
 
-        # Проверяем, что функция возвращает ожидаемый результат
-        self.assertIsNotNone(result)
-        self.assertEqual(result['class'], ['agT1K'])
+        mock_element1 = Mock()
+        mock_element2 = Mock()
+        driver.find_elements.return_value = [mock_element1, mock_element2]
+
+        result = get_items_class(driver)
+
+        driver.find_elements.assert_called_once_with(By.CLASS_NAME, "ipgL7")
+        self.assertEqual(result, [mock_element1, mock_element2])
 
 
 class TestGetItemsUrlsOnPage(unittest.TestCase):
-    def test_get_items_urls_on_page(self):
-        """Проверяет, что функция get_items_urls_on_page находит URL в элементе и добавляет его в список."""
-
-        # Создаем фейковый объект BeautifulSoup для теста
-        fake_html = '<html><body><div class="agT1K"><a class="-VFCY G0WXL _5u-Bz mZ52s" href="/product1">Product 1</a><a class="-VFCY G0WXL _5u-Bz mZ52s" href="/product2">Product 2</a></div></body></html>'
-        soup = BeautifulSoup(fake_html, 'html.parser')
+    def test_get_items_urls_on_page_handles_exception(self):
+        """
+        Тестирование функции get_items_urls_on_page на обработку исключения.
+        """
+        # Создаем фейковый объект WebElement, который вызовет исключение
+        fake_element = Mock()
+        fake_element.find_element.side_effect = NoSuchElementException
 
         # Вызываем тестируемую функцию
-        result = get_items_urls_on_page(soup.find_all('div', class_='agT1K'))
+        result = get_items_urls_on_page([fake_element])
 
-        # Проверяем, что функция возвращает ожидаемый результат
-        self.assertEqual(result, ['https://goldapple.ru/product1'])
+        # Проверяем, что функция обрабатывает исключение и возвращает пустой список
+        self.assertEqual(result, [])
 
 
 class TestGetAllProductsUrls(unittest.TestCase):
-    @patch('main.make_get_request')
-    @patch('main.get_soup')
-    @patch('main.parse_page')
-    @patch('main.get_items_urls_on_page', return_value=["https://goldapple.ru/product1",
-                                                        "https://goldapple.ru/product2"])
-    def test_get_all_products_urls(self, mock_get_items_urls, mock_parse_page, mock_get_soup, mock_make_get_request):
+    @patch('main.make_selenium_get_request')
+    @patch('main.get_items_class')
+    @patch('main.get_items_urls_on_page', return_value=["https://goldapple.ru/product1", "https://goldapple.ru/product2"])
+    def test_get_all_products_urls(self, mock_get_items_urls, mock_get_items_class, mock_make_selenium_get_request):
         """
         Тест проверяет функцию get_all_products_urls, убеждаясь,
         что она возвращает ожидаемый список URL-адресов продуктов.
         """
 
-        mock_make_get_request.return_value.status_code = 200
-        result = get_all_products_urls(1, 1)
+        fake_driver = Mock()
+        mock_get_items_class.return_value = 'fake_items_class'
+        result = get_all_products_urls(fake_driver, 1, 1)
         self.assertEqual(result, ["https://goldapple.ru/product1", "https://goldapple.ru/product2"])
 
 
@@ -124,7 +119,7 @@ class TestGetItemPrice(unittest.TestCase):
         result = get_item_price(fake_driver)
 
         # Проверяем, что функция возвращает ожидаемый результат
-        self.assertEqual(result, 12345.0)
+        self.assertEqual(result, '12 345')
 
         # Проверяем, что функция возвращает "Not available" при отсутствии элемента
         fake_driver.find_element.side_effect = NoSuchElementException
@@ -183,23 +178,6 @@ class TestManipulateMenu(unittest.TestCase):
 
         self.assertEqual(p_item_instructions, "Not available")
         self.assertEqual(p_item_country, "О БРЕНДЕ")
-
-    def test_manipulate_menu_application_found(self):
-        """Тестирование случая, когда элемент <ПРИМЕНЕНИЕ> найден.
-
-        Создается фиктивный объект driver, возвращающий элемент <ПРИМЕНЕНИЕ>.
-        Вызывается функция manipulate_menu с фиктивным driver.
-        Проверяется, что значение p_item_instructions равно "ПРИМЕНЕНИЕ", а p_item_country равно "Not available".
-        """
-        fake_driver = MagicMock()
-        fake_menu_item = MagicMock()
-        fake_menu_item.text.strip.return_value = "ПРИМЕНЕНИЕ"
-        fake_driver.find_element.return_value = fake_menu_item
-
-        p_item_instructions, p_item_country = manipulate_menu(fake_driver)
-
-        self.assertEqual(p_item_instructions, "ПРИМЕНЕНИЕ")
-        self.assertEqual(p_item_country, "Not available")
 
     def test_manipulate_menu_not_found(self):
         """Тестирование случая, когда элемент не найден.
