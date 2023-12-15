@@ -47,7 +47,7 @@ class TestGetItemsClass(unittest.TestCase):
 
         result = get_items_class(driver)
 
-        driver.find_elements.assert_called_once_with(By.CLASS_NAME, "ipgL7")
+        driver.find_elements.assert_called_once_with(By.CLASS_NAME, "Wqob-")
         self.assertEqual(result, [mock_element1, mock_element2])
 
 

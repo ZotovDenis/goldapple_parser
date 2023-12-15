@@ -77,7 +77,7 @@ def make_selenium_get_request(url: str, driver, page: int | None = None) -> None
 
 
 def get_items_class(driver):
-    children = driver.find_elements(By.CLASS_NAME, "ipgL7")
+    children = driver.find_elements(By.CLASS_NAME, "Wqob-")
     print(f"Это внутри: {children}")
     return children
 
@@ -132,7 +132,7 @@ def get_item_description(driver: wd):
     """Функция осуществляет поиск поле <Описание> и парсит соответствующее полю значение."""
     try:
         p_item_description = driver.find_element(
-            By.CLASS_NAME, r'nrFvf')
+            By.CLASS_NAME, r'G5-4J')
         return p_item_description.text.replace("\n", "").strip()
     except NoSuchElementException:
         return "Not available"
@@ -164,10 +164,10 @@ def manipulate_menu(driver: wd):
 
             if menu_item.text.strip() == "ПРИМЕНЕНИЕ":
                 p_item_instructions = driver.find_element(
-                    By.CLASS_NAME, r'nrFvf').text.replace("\n", "").strip()
+                    By.CLASS_NAME, r'G5-4J').text.replace("\n", "").strip()
             elif menu_item.text.strip() == "О БРЕНДЕ":
                 p_item_country = driver.find_element(
-                    By.CLASS_NAME, r'FWNOx').text.strip()
+                    By.CLASS_NAME, r'G4xy5').text.strip()
 
         except NoSuchElementException:
             continue
